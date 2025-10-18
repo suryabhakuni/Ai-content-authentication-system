@@ -1,0 +1,259 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Typography Scale */
+    --font-size-display: 3.5rem;
+    --font-size-h1: 3rem;
+    --font-size-h2: 2.5rem;
+    --font-size-h3: 1.5rem;
+    --font-size-body-lg: 1.125rem;
+    --font-size-body: 1rem;
+    --font-size-sm: 0.875rem;
+    
+    --line-height-display: 1.1;
+    --line-height-h1: 1.2;
+    --line-height-h2: 1.3;
+    --line-height-h3: 1.4;
+    --line-height-body: 1.6;
+    --line-height-sm: 1.5;
+    
+    /* Spacing Scale */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 1.5rem;
+    --spacing-lg: 2rem;
+    --spacing-xl: 3rem;
+    --spacing-2xl: 5rem;
+    --spacing-3xl: 8rem;
+    
+    /* Border Radius Scale */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --radius: 1rem;
+
+    /* 🌞 Light Theme - Academic & Futuristic */
+    --background: 40 25% 97%; /* #f8f9f6 off-white with beige tint */
+    --foreground: 220 39% 11%; /* #111827 deep gray */
+
+    --card: 0 0% 100%; /* #ffffff pure white */
+    --card-foreground: 220 39% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 39% 11%;
+
+    --primary: 243 75% 59%; /* #4f46e5 indigo - intelligence */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 243 75% 50%; /* darker indigo on hover */
+
+    --secondary: 199 89% 48%; /* #0ea5e9 teal - trust/security */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 13% 91%; /* #e5e7eb light gray */
+    --muted-foreground: 215 16% 47%; /* #6b7280 medium gray */
+
+    --accent: 199 89% 48%; /* #0ea5e9 teal accent */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%; /* #e5e7eb */
+    --input: 220 13% 91%;
+    --ring: 243 75% 59%;
+
+    /* Gradients and Effects */
+    --gradient-primary: linear-gradient(90deg, #4f46e5, #0ea5e9);
+    --gradient-hero: linear-gradient(135deg, #4f46e5, #0ea5e9);
+    --gradient-subtle: linear-gradient(180deg, hsl(40, 25%, 99%), hsl(40, 25%, 97%));
+    --shadow-elegant: 0 4px 20px -4px rgba(79, 70, 229, 0.2);
+    --shadow-card: 0 2px 8px -2px rgba(0, 0, 0, 0.08);
+    --shadow-card-hover: 0 8px 24px -4px rgba(0, 0, 0, 0.12);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    /* 🌙 Dark Theme - Academic & Futuristic */
+    --background: 240 21% 15%; /* #1e1e2e soft dark gray */
+    --foreground: 220 13% 91%; /* #e5e7eb light gray */
+
+    --card: 240 17% 18%; /* #272935 slightly lighter gray */
+    --card-foreground: 220 13% 91%;
+
+    --popover: 240 17% 18%;
+    --popover-foreground: 220 13% 91%;
+
+    --primary: 199 89% 48%; /* #0ea5e9 teal - trust (primary in dark) */
+    --primary-foreground: 240 21% 15%;
+    --primary-hover: 199 89% 40%; /* darker teal on hover */
+
+    --secondary: 243 75% 59%; /* #4f46e5 indigo - intelligence (secondary in dark) */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 240 17% 18%; /* #272935 */
+    --muted-foreground: 220 9% 46%; /* #9ca3af medium gray */
+
+    --accent: 243 75% 59%; /* #4f46e5 indigo accent */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 11% 25%; /* #3f3f46 dim gray */
+    --input: 240 11% 25%;
+    --ring: 199 89% 48%;
+
+    /* Dark theme gradients and effects */
+    --gradient-primary: linear-gradient(90deg, #0ea5e9, #4f46e5);
+    --gradient-hero: linear-gradient(135deg, #0ea5e9, #4f46e5);
+    --gradient-subtle: linear-gradient(180deg, hsl(240, 21%, 17%), hsl(240, 21%, 13%));
+    --shadow-elegant: 0 4px 20px -4px rgba(14, 165, 233, 0.3);
+    --shadow-card: 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+    --shadow-card-hover: 0 8px 24px -4px rgba(14, 165, 233, 0.2);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+  }
+
+  h1 {
+    font-size: var(--font-size-h1);
+    line-height: var(--line-height-h1);
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: var(--font-size-h2);
+    line-height: var(--line-height-h2);
+    font-weight: 700;
+  }
+
+  h3 {
+    font-size: var(--font-size-h3);
+    line-height: var(--line-height-h3);
+    font-weight: 600;
+  }
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* UI Components */
+@layer components {
+  /* Card Styles */
+  .glass-card {
+    @apply backdrop-blur-md bg-card/80 border border-border/40;
+  }
+  
+  .card-shadow {
+    box-shadow: var(--shadow-card);
+    transition: var(--transition-fast);
+  }
+  
+  .card-shadow:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+  
+  /* Gradient Styles */
+  .hero-gradient {
+    background: var(--gradient-hero);
+  }
+  
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .subtle-gradient {
+    background: var(--gradient-subtle);
+  }
+  
+  .elegant-shadow {
+    box-shadow: var(--shadow-elegant);
+  }
+  
+  /* Typography Utilities */
+  .text-display {
+    font-size: var(--font-size-display);
+    line-height: var(--line-height-display);
+    font-weight: 700;
+  }
+  
+  .text-body-lg {
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-body);
+  }
+  
+  /* Spacing Utilities */
+  .section-spacing {
+    padding-top: var(--spacing-2xl);
+    padding-bottom: var(--spacing-2xl);
+  }
+  
+  /* Button Enhancements */
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-hover text-primary-foreground;
+    transition: var(--transition-fast);
+  }
+  
+  .btn-primary:hover {
+    transform: scale(1.02);
+  }
+  
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+  
+  /* Card Component */
+  .card-modern {
+    @apply rounded-xl border border-border bg-card p-6;
+    box-shadow: var(--shadow-card);
+    transition: var(--transition-smooth);
+  }
+  
+  .card-modern:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+  
+  /* Input Enhancements */
+  .input-modern {
+    @apply rounded-lg border-2 border-input focus:border-primary;
+    transition: var(--transition-fast);
+  }
+  
+  /* Smooth Transitions */
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+  
+  .transition-fast {
+    transition: var(--transition-fast);
+  }
+}
