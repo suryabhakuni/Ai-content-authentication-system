@@ -43,3 +43,12 @@ mnemonic.txt
 build/
 .cache/
 
+# Blockchain artifacts
+blockchain/node_modules
+blockchain/cache
+blockchain/artifacts
+blockchain/typechain
+blockchain/typechain-types
+blockchain/coverage
+blockchain/coverage.json
+

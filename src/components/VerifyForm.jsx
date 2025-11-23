@@ -1,64 +1,258 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Search, FileText, Hash, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { ResultCard } from './ResultCard';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Search, FileText, Hash, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { ResultCard } from "./ResultCard";
+import blockchainService from "@/services/blockchainService";
 
 export const VerifyForm = () => {
-  const [certificateId, setCertificateId] = useState('');
-  const [contentHash, setContentHash] = useState('');
+  const [certificateId, setCertificateId] = useState("");
+  const [contentHash, setContentHash] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [validationErrors, setValidationErrors] = useState({
+    certificateId: "",
+    contentHash: "",
+  });
   const { toast } = useToast();
 
-  const handleVerify = async () => {
-    if (!certificateId.trim() && !contentHash.trim()) {
+  // Validation functions
+  const validateCertificateId = (value) => {
+    if (!value.trim()) return "";
+
+    if (value.length < 3) {
+      return "Certificate ID too short (minimum 3 characters)";
+    }
+
+    return "";
+  };
+
+  const validateContentHash = (value) => {
+    if (!value.trim()) return "";
+
+    // Check if it starts with 0x
+    if (!value.startsWith("0x")) {
+      return "Content hash must start with '0x'";
+    }
+
+    // Check if it's valid hex (0x followed by hex characters)
+    const hexPattern = /^0x[0-9a-fA-F]+$/;
+    if (!hexPattern.test(value)) {
+      return "Invalid hash format (must be hexadecimal)";
+    }
+
+    // Check length (typical hash is 66 characters: 0x + 64 hex chars)
+    if (value.length < 10) {
+      return "Hash too short";
+    }
+
+    return "";
+  };
+
+  // Enhanced error handling function
+  const handleVerificationError = (error) => {
+    console.error("Verification error:", error);
+
+    // Wallet connection errors
+    if (
+      error.message?.includes("wallet") ||
+      error.message?.includes("MetaMask") ||
+      error.code === 4001
+    ) {
       toast({
-        title: "Missing Information",
-        description: "Please enter either a Certificate ID or Content Hash to verify.",
-        variant: "destructive"
+        title: "Wallet Connection Required",
+        description:
+          "Please connect your wallet to verify certificates. Click the 'Connect Wallet' button in the navigation bar.",
+        variant: "destructive",
+        duration: 6000,
       });
       return;
     }
 
+    // Network connection errors
+    if (
+      error.message?.includes("network") ||
+      error.message?.includes("fetch") ||
+      error.code === "NETWORK_ERROR"
+    ) {
+      toast({
+        title: "Network Connection Error",
+        description:
+          "Unable to connect to the blockchain. Check your internet connection and try again.",
+        variant: "destructive",
+        duration: 6000,
+        action: (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleVerify()}
+            className="ml-2"
+          >
+            Retry
+          </Button>
+        ),
+      });
+      return;
+    }
+
+    // Wrong network errors
+    if (
+      error.message?.includes("chain") ||
+      error.message?.includes("network") ||
+      error.code === -32603
+    ) {
+      const networkInfo = blockchainService.getNetworkInfo();
+      toast({
+        title: "Wrong Network",
+        description: `Please switch to ${networkInfo.name} network in your wallet to verify certificates.`,
+        variant: "destructive",
+        duration: 6000,
+      });
+      return;
+    }
+
+    // RPC errors
+    if (error.code === -32603 || error.message?.includes("RPC")) {
+      toast({
+        title: "Blockchain Connection Error",
+        description:
+          "Unable to connect to the blockchain RPC. The network may be experiencing issues. Please try again in a moment.",
+        variant: "destructive",
+        duration: 6000,
+        action: (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleVerify()}
+            className="ml-2"
+          >
+            Retry
+          </Button>
+        ),
+      });
+      return;
+    }
+
+    // Generic error with retry
+    toast({
+      title: "Verification Failed",
+      description:
+        error.message ||
+        "An unexpected error occurred. Please try again or contact support if the issue persists.",
+      variant: "destructive",
+      duration: 6000,
+      action: (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => handleVerify()}
+          className="ml-2"
+        >
+          Retry
+        </Button>
+      ),
+    });
+  };
+
+  const handleVerify = async () => {
+    // Check if at least one field is filled
+    if (!certificateId.trim() && !contentHash.trim()) {
+      toast({
+        title: "Missing Information",
+        description:
+          "Please enter either a Certificate ID or Content Hash to verify.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+
+    // Validate inputs
+    const certError = validateCertificateId(certificateId);
+    const hashError = validateContentHash(contentHash);
+
+    if (certError || hashError) {
+      setValidationErrors({
+        certificateId: certError,
+        contentHash: hashError,
+      });
+
+      toast({
+        title: "Invalid Input",
+        description: certError || hashError,
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+
+    // Clear validation errors
+    setValidationErrors({ certificateId: "", contentHash: "" });
+
     setLoading(true);
     try {
-      // Simulate blockchain lookup - replace with actual blockchain query
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock result - in real implementation, this would come from blockchain
-      if (Math.random() > 0.3) { // 70% chance of finding a record
-        const mockResult = {
-          isAuthentic: Math.random() > 0.2, // 80% chance of being authentic if found
-          confidence: 95 + Math.random() * 5, // High confidence for blockchain records
-          contentHash: contentHash || "0x" + Math.random().toString(16).substring(2, 18),
-          blockchainTxHash: "0x" + Math.random().toString(16).substring(2, 18),
-          timestamp: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-          certificateId: certificateId || Math.random().toString(36).substring(7)
+      // Use content hash for blockchain lookup (certificate ID is just for display)
+      const hashToVerify = contentHash.trim() || certificateId.trim();
+
+      console.log("🔍 Verifying hash:", hashToVerify);
+
+      // Query blockchain for verification record
+      const record = await blockchainService.getVerificationRecord(
+        hashToVerify
+      );
+
+      if (record && record.exists) {
+        // Record found on blockchain
+        const networkInfo = await blockchainService.getCurrentNetworkInfo();
+
+        const result = {
+          isAuthentic: record.isAuthentic,
+          confidence: Number(record.confidence),
+          contentHash: record.contentHash,
+          timestamp: new Date(Number(record.timestamp) * 1000).toISOString(),
+          certificateId: certificateId || hashToVerify.substring(0, 10),
+          verifier: record.verifier,
+          network: networkInfo.name,
+          blockExplorer: networkInfo.blockExplorer,
         };
-        
-        setResult(mockResult);
+
+        console.log("✅ Verification result:", result);
+        setResult(result);
+
         toast({
-          title: "Verification Complete",
-          description: "Certificate found on blockchain and verified."
+          title: "✅ Verification Complete",
+          description: `Certificate found on blockchain! Content is ${
+            record.isAuthentic ? "AUTHENTIC" : "AI-GENERATED"
+          } (${record.confidence}% confidence)`,
+          variant: "success",
+          duration: 5000,
         });
       } else {
+        // Enhanced "Certificate Not Found" error message
+        const networkInfo = await blockchainService.getCurrentNetworkInfo();
         toast({
           title: "Certificate Not Found",
-          description: "No matching certificate found on the blockchain.",
-          variant: "destructive"
+          description: `No matching certificate found on ${networkInfo.name}. Common issues:
+• Certificate may be on a different network
+• Content hash may be incorrect
+• Certificate may not have been created yet`,
+          variant: "destructive",
+          duration: 7000,
         });
         setResult(null);
       }
     } catch (error) {
-      toast({
-        title: "Verification Failed",
-        description: "Failed to verify certificate. Please try again.",
-        variant: "destructive"
-      });
+      handleVerificationError(error);
+      setResult(null);
     }
     setLoading(false);
   };
@@ -73,7 +267,9 @@ export const VerifyForm = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <h2 className="text-4xl font-bold mb-4">Verify Authentication Certificate</h2>
+          <h2 className="text-4xl font-bold mb-4">
+            Verify Authentication Certificate
+          </h2>
           <p className="text-xl text-muted-foreground">
             Check the blockchain for existing authentication certificates
           </p>
@@ -93,7 +289,8 @@ export const VerifyForm = () => {
                 Certificate Verification
               </CardTitle>
               <CardDescription>
-                Enter a Certificate ID or Content Hash to verify its authenticity on the blockchain
+                Enter a Certificate ID or Content Hash to verify its
+                authenticity on the blockchain
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -106,11 +303,30 @@ export const VerifyForm = () => {
                   <Input
                     placeholder="e.g., abc123def"
                     value={certificateId}
-                    onChange={(e) => setCertificateId(e.target.value)}
-                    className="font-mono"
+                    onChange={(e) => {
+                      setCertificateId(e.target.value);
+                      if (validationErrors.certificateId) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          certificateId: "",
+                        }));
+                      }
+                    }}
+                    className={`font-mono ${
+                      validationErrors.certificateId
+                        ? "border-red-500 focus:border-red-500 animate-shake"
+                        : ""
+                    }`}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    The unique identifier from your authentication certificate
+                  <p
+                    className={`text-xs ${
+                      validationErrors.certificateId
+                        ? "text-red-600 dark:text-red-400 font-medium"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {validationErrors.certificateId ||
+                      "The unique identifier from your authentication certificate"}
                   </p>
                 </div>
 
@@ -122,26 +338,47 @@ export const VerifyForm = () => {
                   <Input
                     placeholder="e.g., 0x1a2b3c4d..."
                     value={contentHash}
-                    onChange={(e) => setContentHash(e.target.value)}
-                    className="font-mono"
+                    onChange={(e) => {
+                      setContentHash(e.target.value);
+                      if (validationErrors.contentHash) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          contentHash: "",
+                        }));
+                      }
+                    }}
+                    className={`font-mono ${
+                      validationErrors.contentHash
+                        ? "border-red-500 focus:border-red-500 animate-shake"
+                        : ""
+                    }`}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    The cryptographic hash of your content
+                  <p
+                    className={`text-xs ${
+                      validationErrors.contentHash
+                        ? "text-red-600 dark:text-red-400 font-medium"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {validationErrors.contentHash ||
+                      "The cryptographic hash of your content"}
                   </p>
                 </div>
               </div>
 
               <div className="flex justify-center">
-                <Button 
+                <Button
                   onClick={handleVerify}
-                  disabled={loading || (!certificateId.trim() && !contentHash.trim())}
+                  disabled={
+                    loading || (!certificateId.trim() && !contentHash.trim())
+                  }
                   size="lg"
-                  className="min-w-[200px]"
+                  className={`min-w-[200px] ${loading ? "animate-pulse" : ""}`}
                 >
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 animate-spin" size={16} />
-                      Verifying...
+                      Verifying on blockchain...
                     </>
                   ) : (
                     <>
@@ -153,7 +390,9 @@ export const VerifyForm = () => {
               </div>
 
               <div className="text-center text-sm text-muted-foreground space-y-1">
-                <p>🔒 All verifications are performed directly on the blockchain</p>
+                <p>
+                  🔒 All verifications are performed directly on the blockchain
+                </p>
                 <p>📋 No personal information is stored or transmitted</p>
               </div>
             </CardContent>

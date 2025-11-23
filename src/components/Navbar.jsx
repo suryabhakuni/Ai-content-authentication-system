@@ -1,16 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sun, Moon, Wallet } from "lucide-react";
+import { Menu, X, Sun, Moon, Wallet, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useTheme } from "@/contexts/ThemeContext";
-import { ethers } from "ethers";
 import { useToast } from "@/hooks/use-toast";
+import blockchainService from "@/services/blockchainService";
+import { BlockchainSettings } from "@/components/BlockchainSettings";
+import { BLOCKCHAIN_CONFIG, CONTRACT_ABI } from "@/config/blockchain";
 import logo from "@/assets/img.png";
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [account, setAccount] = useState(null);
+  const [network, setNetwork] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const { toast } = useToast();
@@ -22,34 +28,147 @@ export const Navbar = () => {
     { name: "About", path: "/about" },
   ];
 
+  // Check connection status on mount
+  useEffect(() => {
+    const status = blockchainService.getConnectionStatus();
+    if (status.isConnected) {
+      setAccount(status.account);
+      setNetwork(status.network);
+
+      // Initialize contract if wallet is already connected
+      const networkKey =
+        blockchainService.getNetworkInfo(status.network?.chainId)?.key ||
+        "sepolia";
+      const contractAddress = BLOCKCHAIN_CONFIG.CONTRACT_ADDRESS[networkKey];
+
+      if (contractAddress && contractAddress !== "") {
+        blockchainService.initializeContract(CONTRACT_ABI, contractAddress);
+        console.log("✅ Contract initialized on mount:", contractAddress);
+      }
+    }
+
+    // Listen for wallet events
+    const handleAccountChanged = (event) => {
+      setAccount(event.detail.account);
+      toast({
+        title: "Account Changed",
+        description: `Switched to ${event.detail.account.slice(
+          0,
+          6
+        )}...${event.detail.account.slice(-4)}`,
+      });
+    };
+
+    const handleWalletDisconnected = () => {
+      setAccount(null);
+      setNetwork(null);
+      toast({
+        title: "Wallet Disconnected",
+        description: "Your wallet has been disconnected.",
+      });
+    };
+
+    window.addEventListener("accountChanged", handleAccountChanged);
+    window.addEventListener("walletDisconnected", handleWalletDisconnected);
+
+    return () => {
+      window.removeEventListener("accountChanged", handleAccountChanged);
+      window.removeEventListener(
+        "walletDisconnected",
+        handleWalletDisconnected
+      );
+    };
+  }, [toast]);
+
   const connectWallet = async () => {
+    if (account) {
+      // If already connected, disconnect
+      blockchainService.disconnectWallet();
+      setAccount(null);
+      setNetwork(null);
+      toast({
+        title: "Wallet Disconnected",
+        description: "Your wallet has been disconnected.",
+      });
+      return;
+    }
+
+    setIsConnecting(true);
     try {
-      if (typeof window.ethereum !== "undefined") {
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const address = await signer.getAddress();
-        setAccount(address);
-        toast({
-          title: "Wallet Connected",
-          description: `Connected to ${address.slice(0, 6)}...${address.slice(
-            -4
-          )}`,
-        });
+      const result = await blockchainService.connectWallet();
+      setAccount(result.address);
+      setNetwork(result.network);
+
+      // Initialize contract with ABI and address based on network
+      const networkKey =
+        blockchainService.getNetworkInfo(result.network.chainId)?.key ||
+        "sepolia";
+      const contractAddress = BLOCKCHAIN_CONFIG.CONTRACT_ADDRESS[networkKey];
+
+      if (contractAddress && contractAddress !== "") {
+        blockchainService.initializeContract(CONTRACT_ABI, contractAddress);
+        console.log("✅ Contract initialized:", contractAddress);
       } else {
+        console.warn("⚠️ No contract address found for network:", networkKey);
+      }
+
+      // Dispatch event to notify other components
+      window.dispatchEvent(
+        new CustomEvent("accountChanged", {
+          detail: { account: result.address },
+        })
+      );
+
+      toast({
+        title: "Wallet Connected",
+        description: `Connected to ${result.address.slice(
+          0,
+          6
+        )}...${result.address.slice(-4)}`,
+      });
+    } catch (error) {
+      console.error("Wallet connection error:", error);
+
+      if (error.message.includes("MetaMask is not installed")) {
         toast({
           title: "MetaMask Not Found",
           description: "Please install MetaMask to connect your wallet.",
           variant: "destructive",
         });
+      } else if (error.code === 4001) {
+        toast({
+          title: "Connection Rejected",
+          description: "You rejected the connection request.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Connection Failed",
+          description:
+            error.message || "Failed to connect wallet. Please try again.",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      toast({
-        title: "Connection Failed",
-        description: "Failed to connect wallet. Please try again.",
-        variant: "destructive",
-      });
+    } finally {
+      setIsConnecting(false);
     }
+  };
+
+  const getNetworkBadge = () => {
+    if (!network) return null;
+
+    const networkInfo = blockchainService.getNetworkInfo(network.chainId);
+    if (!networkInfo) return null;
+
+    return (
+      <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
+        {networkInfo.key === "hardhat"
+          ? "Local"
+          : networkInfo.key === "sepolia"
+          ? "Sepolia"
+          : "Mainnet"}
+      </span>
+    );
   };
 
   const isActive = (path) => location.pathname === path;
@@ -93,18 +212,37 @@ export const Navbar = () => {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-3">
+            <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 w-9 p-0 transition-fast hover:scale-105"
+                >
+                  <Settings size={18} />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="p-0 max-w-md">
+                <BlockchainSettings onClose={() => setSettingsOpen(false)} />
+              </DialogContent>
+            </Dialog>
+
             <Button
               variant="outline"
               size="sm"
               onClick={connectWallet}
+              disabled={isConnecting}
               className="flex items-center gap-2 h-9 px-4 transition-fast hover:scale-105"
             >
               <Wallet size={16} />
               <span className="text-sm">
-                {account
+                {isConnecting
+                  ? "Connecting..."
+                  : account
                   ? `${account.slice(0, 6)}...${account.slice(-4)}`
                   : "Connect"}
               </span>
+              {account && getNetworkBadge()}
             </Button>
 
             <Button
@@ -191,15 +329,31 @@ export const Navbar = () => {
                 <div className="mt-8 space-y-3">
                   <Button
                     variant="outline"
+                    onClick={() => {
+                      setSettingsOpen(true);
+                      setIsOpen(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 h-11"
+                  >
+                    <Settings size={16} />
+                    <span>Settings</span>
+                  </Button>
+
+                  <Button
+                    variant="outline"
                     onClick={connectWallet}
+                    disabled={isConnecting}
                     className="w-full flex items-center justify-center gap-2 h-11"
                   >
                     <Wallet size={16} />
                     <span>
-                      {account
+                      {isConnecting
+                        ? "Connecting..."
+                        : account
                         ? `${account.slice(0, 6)}...${account.slice(-4)}`
                         : "Connect Wallet"}
                     </span>
+                    {account && getNetworkBadge()}
                   </Button>
 
                   <Button
@@ -213,6 +367,15 @@ export const Navbar = () => {
                     </span>
                   </Button>
                 </div>
+
+                {/* Settings Dialog for Mobile */}
+                <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                  <DialogContent className="p-0 max-w-md">
+                    <BlockchainSettings
+                      onClose={() => setSettingsOpen(false)}
+                    />
+                  </DialogContent>
+                </Dialog>
               </div>
             </motion.div>
           </>

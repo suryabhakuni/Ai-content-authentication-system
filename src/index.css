@@ -248,6 +248,11 @@ All colors MUST be HSL.
     transition: var(--transition-fast);
   }
   
+  .input-error {
+    @apply border-red-500 focus:border-red-500;
+    animation: shake 0.5s ease-in-out;
+  }
+  
   /* Smooth Transitions */
   .transition-smooth {
     transition: var(--transition-smooth);
@@ -256,4 +261,101 @@ All colors MUST be HSL.
   .transition-fast {
     transition: var(--transition-fast);
   }
+  
+  /* Hover Effects */
+  .hover-lift {
+    transition: var(--transition-fast);
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+  
+  .hover-scale {
+    transition: var(--transition-fast);
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+  
+  .hover-scale:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Custom Animations */
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Animation Utility Classes */
+.animate-slide-in {
+  animation: slideInFromTop 0.3s ease-out;
+  will-change: transform, opacity;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+  will-change: opacity;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+  will-change: transform;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: opacity;
+}
+
+/* Performance: Remove will-change after animation completes */
+.animate-slide-in,
+.animate-fade-in,
+.animate-shake {
+  animation-fill-mode: forwards;
+}
+
+.animate-slide-in:not(:hover):not(:focus),
+.animate-fade-in:not(:hover):not(:focus),
+.animate-shake:not(:hover):not(:focus) {
+  will-change: auto;
 }
